@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: wundr-migrate
+  namespace: wundr
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: your-registry/wundr-api:latest
+          command: ["node", "dist/scripts/migrate.js"]
+          envFrom:
+            - configMapRef:
+                name: wundr-config
+            - secretRef:
+                name: wundr-secrets

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wundr-config
+  namespace: wundr
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  CORS_ORIGIN: "https://app.example.com"
+  SIWE_DOMAIN: "app.example.com"
+  SIWE_URI_ALLOWLIST: "https://app.example.com"
+  SIWE_CHAIN_ALLOWLIST: "1,8453,137"
+  SIWE_ISSUED_AT_MAX_AGE_SECONDS: "600"
+  COOKIE_NAME: "wundr_session"
+  COOKIE_SECURE: "true"

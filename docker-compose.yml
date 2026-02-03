@@ -1,0 +1,56 @@
+name: wundr
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: wundr
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d wundr"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ./apps/api
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgres://postgres:postgres@postgres:5432/wundr"
+      REDIS_URL: "redis://redis:6379"
+      NODE_ENV: production
+      PORT: 3000
+      CORS_ORIGIN: "http://localhost:3001"
+      SIWE_DOMAIN: "localhost"
+      SIWE_URI_ALLOWLIST: "http://localhost:3001"
+      SIWE_CHAIN_ALLOWLIST: "1,8453,137"
+      SIWE_ISSUED_AT_MAX_AGE_SECONDS: 600
+      JWT_SECRET: "change_me_change_me_change_me_change_me"
+      SESSION_TTL_SECONDS: 3600
+      COOKIE_NAME: "wundr_session"
+      COOKIE_SECURE: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:

@@ -1,0 +1,19 @@
+-- ETH mainnet
+INSERT INTO payment_rails (rail, chain_id, currency, treasury, rpc_url, enabled, min_confirmations)
+VALUES ('eth', 1, 'eth', '0xYourTreasury', 'https://your-mainnet-rpc', true, 6)
+ON CONFLICT (rail, chain_id) DO NOTHING;
+
+-- BTC
+INSERT INTO payment_rails (rail, chain_id, currency, treasury, rpc_url, enabled, min_confirmations)
+VALUES ('btc', NULL, 'btc', 'bc1YourTreasury', 'http://bitcoind:8332', true, 2)
+ON CONFLICT (rail, chain_id) DO NOTHING;
+
+-- XRP
+INSERT INTO payment_rails (rail, chain_id, currency, treasury, rpc_url, enabled, min_confirmations)
+VALUES ('xrp', NULL, 'xrp', 'rYourTreasury', 'http://rippled:5005', true, 1)
+ON CONFLICT (rail, chain_id) DO NOTHING;
+
+-- PI (treasury could be your app receiver id / config label)
+INSERT INTO payment_rails (rail, chain_id, currency, treasury, enabled, min_confirmations)
+VALUES ('pi', NULL, 'pi', 'pi_app_receiver', true, 1)
+ON CONFLICT (rail, chain_id) DO NOTHING;

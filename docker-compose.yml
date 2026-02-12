@@ -11,6 +11,8 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - wundr_pg:/var/lib/postgresql/data
+      
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d wundr"]
       interval: 5s
@@ -29,7 +31,8 @@ services:
 
   api:
     build:
-      context: ./apps/api
+      context: .
+      dockerfile: apps/api/Dockerfile
     ports:
       - "3000:3000"
     environment:
@@ -54,3 +57,4 @@ services:
 
 volumes:
   pgdata:
+  wundr_pg:

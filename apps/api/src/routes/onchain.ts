@@ -42,7 +42,7 @@ export function marketplaceOnchainRouter() {
         `SELECT 1 FROM marketplace_purchases WHERE chain_id = $1 AND tx_hash = $2 LIMIT 1`,
         [input.chainId, input.txHash]
       );
-      if (replay.rowCount > 0) return res.status(409).json({ error: "tx_already_used" });
+      if ((replay.rowCount ?? 0) > 0) return res.status(409).json({ error: "tx_already_used" });
 
       // Chain config (put in env/ConfigMap in k8s)
       const chainId = input.chainId as SupportedChainId;

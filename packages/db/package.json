@@ -1,0 +1,19 @@
+{
+  "name": "@wundr/db",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "migrate": "node --loader ts-node/esm src/migrator.ts",
+    "migrate:up": "pnpm migrate up",
+    "migrate:down": "pnpm migrate down",
+    "migrate:status": "pnpm migrate status"
+  },
+  "dependencies": {
+    "pg": "^8.12.0"
+  },
+  "devDependencies": {
+    "node-pg-migrate": "^7.7.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  }
+}

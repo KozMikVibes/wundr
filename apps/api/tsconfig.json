@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+
+    "rootDir": "src",
+    "outDir": "dist",
+
+    "sourceMap": true,
+
+    "strict": true,
+    "noEmitOnError": true,
+    "skipLibCheck": true,
+
+    "types": ["node"],
+
+    "verbatimModuleSyntax": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "node_modules"]
+}

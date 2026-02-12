@@ -5,9 +5,16 @@ import { requireCsrf } from "../lib/csrf.js";
 import { sanitizeSlug, sanitizeString } from "../lib/sanitize.js";
 import { CAPS } from "../lib/caps.js";
 import * as repo from "../repos/learnRepo.js";
+import { q } from "../lib/db.js";
 
 function normAddress(addr: string) {
   return sanitizeString(addr, 80).toLowerCase();
+}
+
+function normParamString(v: unknown, max = 256): string {
+  if (Array.isArray(v)) v = v[0];
+  if (typeof v !== "string") throw Object.assign(new Error("bad_request"), { status: 400 });
+  return sanitizeString(v, max);
 }
 
 // Server-side XP policy (tweak freely)
@@ -37,34 +44,33 @@ const CreateCategorySchema = z.object({
   title: z.string().min(3).max(120),
   description: z.string().max(1000).optional(),
   tags: z.array(z.string().min(1).max(32)).max(20).default([]),
-  visibility: z.enum(["public", "unlisted", "private"]).default("public")
+  visibility: z.enum(["public", "unlisted", "private"]).default("public"),
 });
 
 const CreateQuestSchema = z.object({
   categoryId: z.string().uuid(),
   title: z.string().min(3).max(140),
   difficulty: z.enum(["easy", "medium", "hard"]).default("easy"),
-  estimatedMinutes: z.number().int().positive().max(10_000).default(30)
+  estimatedMinutes: z.number().int().positive().max(10_000).default(30),
 });
 
 const CreateNodeSchema = z.object({
   questId: z.string().uuid(),
   type: z.enum(["reading", "checklist", "puzzle", "quiz", "reflection", "onchain", "irl"]),
   title: z.string().min(3).max(140),
-  content: z.any().default({})
+  content: z.any().default({}),
 });
 
 const AddEdgeSchema = z.object({
   fromNodeId: z.string().uuid(),
   toNodeId: z.string().uuid(),
-  condition: z.string().max(200).optional()
+  condition: z.string().max(200).optional(),
 });
 
 const CompleteNodeSchema = z.object({
   questId: z.string().uuid(),
   nodeId: z.string().uuid(),
-  // Optional badge to award for completing this node; server will de-dupe
-  badge: z.string().max(64).optional()
+  badge: z.string().max(64).optional(),
 });
 
 export function learnRouter() {
@@ -83,9 +89,10 @@ export function learnRouter() {
 
   r.get("/quests/:questId/graph", requireAuth, requireCap(CAPS.LEARN_READ), async (req, res, next) => {
     try {
-      const questId = req.params.questId;
+      const questId = normParamString((req as any).params?.questId, 128);
       const quest = await repo.getQuestById(questId);
       if (!quest) return res.status(404).json({ error: "quest_not_found" });
+
       const graph = await repo.listQuestGraph(questId);
       res.json({ quest, ...graph });
     } catch (e) {
@@ -96,7 +103,8 @@ export function learnRouter() {
   r.get("/progress/:questId", requireAuth, requireCap(CAPS.LEARN_READ), async (req, res, next) => {
     try {
       const address = normAddress((req as any).user.address);
-      const questId = req.params.questId;
+      const questId = normParamString((req as any).params?.questId, 128);
+
       const prog = await repo.getProgress(address, questId);
       if (!prog) return res.json({ item: null });
 
@@ -108,8 +116,11 @@ export function learnRouter() {
   });
 
   // --- WRITES (CSRF required) ---
+  // NOTE: Your CAPS file (per earlier error) has LEARN_WRITE but not the granular create/write caps.
+  // If you later add LEARN_CATEGORY_CREATE / LEARN_QUEST_CREATE / LEARN_PROGRESS_WRITE, swap them back in.
+  const requireLearnWrite = [requireAuth, requireCap(CAPS.LEARN_WRITE), requireCsrf] as const;
 
-  r.post("/categories", requireAuth, requireCap(CAPS.LEARN_CATEGORY_CREATE), requireCsrf, async (req, res, next) => {
+  r.post("/categories", ...requireLearnWrite, async (req, res, next) => {
     try {
       const input = CreateCategorySchema.parse(req.body ?? {});
       const address = normAddress((req as any).user.address);
@@ -117,7 +128,7 @@ export function learnRouter() {
       const slug = sanitizeSlug(input.slug);
       const title = sanitizeString(input.title, 120);
       const description = input.description ? sanitizeString(input.description, 1000) : null;
-      const tags = input.tags.map(t => sanitizeString(t, 32)).filter(Boolean);
+      const tags = input.tags.map((t) => sanitizeString(t, 32)).filter(Boolean);
 
       const item = await repo.createCategory({
         slug,
@@ -125,7 +136,7 @@ export function learnRouter() {
         description,
         tags,
         visibility: input.visibility,
-        createdBy: address
+        createdBy: address,
       });
 
       res.status(201).json({ item });
@@ -134,7 +145,7 @@ export function learnRouter() {
     }
   });
 
-  r.post("/quests", requireAuth, requireCap(CAPS.LEARN_QUEST_CREATE), requireCsrf, async (req, res, next) => {
+  r.post("/quests", ...requireLearnWrite, async (req, res, next) => {
     try {
       const input = CreateQuestSchema.parse(req.body ?? {});
       const address = normAddress((req as any).user.address);
@@ -149,7 +160,7 @@ export function learnRouter() {
         title,
         difficulty: input.difficulty,
         estimatedMinutes: input.estimatedMinutes,
-        createdBy: address
+        createdBy: address,
       });
 
       res.status(201).json({ item });
@@ -158,22 +169,20 @@ export function learnRouter() {
     }
   });
 
-  r.post("/nodes", requireAuth, requireCap(CAPS.LEARN_QUEST_CREATE), requireCsrf, async (req, res, next) => {
+  r.post("/nodes", ...requireLearnWrite, async (req, res, next) => {
     try {
       const input = CreateNodeSchema.parse(req.body ?? {});
       const quest = await repo.getQuestById(input.questId);
       if (!quest) return res.status(404).json({ error: "quest_not_found" });
 
       const title = sanitizeString(input.title, 140);
-
-      // Content is JSON. DO NOT accept raw HTML. Render content via allowlisted components client-side.
       const content = input.content ?? {};
 
       const item = await repo.createNode({
         questId: input.questId,
         type: input.type,
         title,
-        content
+        content,
       });
 
       res.status(201).json({ item });
@@ -182,20 +191,19 @@ export function learnRouter() {
     }
   });
 
-  r.post("/edges", requireAuth, requireCap(CAPS.LEARN_QUEST_CREATE), requireCsrf, async (req, res, next) => {
+  r.post("/edges", ...requireLearnWrite, async (req, res, next) => {
     try {
       const input = AddEdgeSchema.parse(req.body ?? {});
       const condition = input.condition ? sanitizeString(input.condition, 200) : null;
 
-      // Basic existence check: both nodes must exist in same quest (prevent cross-quest linking)
-      // We enforce via query: get their quest_id and compare
-      // (Parameterize: done in repo? simplest here using q, but keep centralized if you prefer.)
-      // We'll do it in a single parameterized query here to keep it tight.
-
-      // NOTE: This uses the shared q() helper.
-      const { q } = await import("../lib/db.js");
-      const resA = await q<{ quest_id: string }>(`SELECT quest_id FROM learn_nodes WHERE id = $1`, [input.fromNodeId]);
-      const resB = await q<{ quest_id: string }>(`SELECT quest_id FROM learn_nodes WHERE id = $1`, [input.toNodeId]);
+      const resA = await q<{ quest_id: string }>(
+        `SELECT quest_id FROM learn_nodes WHERE id = $1`,
+        [input.fromNodeId]
+      );
+      const resB = await q<{ quest_id: string }>(
+        `SELECT quest_id FROM learn_nodes WHERE id = $1`,
+        [input.toNodeId]
+      );
 
       const a = resA.rows[0]?.quest_id;
       const b = resB.rows[0]?.quest_id;
@@ -205,7 +213,7 @@ export function learnRouter() {
       const item = await repo.addEdge({
         fromNodeId: input.fromNodeId,
         toNodeId: input.toNodeId,
-        condition
+        condition,
       });
 
       res.status(201).json({ item });
@@ -214,17 +222,14 @@ export function learnRouter() {
     }
   });
 
-  r.post("/progress/complete", requireAuth, requireCap(CAPS.LEARN_PROGRESS_WRITE), requireCsrf, async (req, res, next) => {
+  r.post("/progress/complete", ...requireLearnWrite, async (req, res, next) => {
     try {
       const input = CompleteNodeSchema.parse(req.body ?? {});
       const address = normAddress((req as any).user.address);
 
-      // Ensure quest exists
       const quest = await repo.getQuestById(input.questId);
       if (!quest) return res.status(404).json({ error: "quest_not_found" });
 
-      // Ensure node belongs to quest and fetch node type
-      const { q } = await import("../lib/db.js");
       const nodeRes = await q<{ id: string; type: repo.NodeType }>(
         `SELECT id, type FROM learn_nodes WHERE id = $1 AND quest_id = $2`,
         [input.nodeId, input.questId]
@@ -232,13 +237,9 @@ export function learnRouter() {
       const node = nodeRes.rows[0];
       if (!node) return res.status(404).json({ error: "node_not_found" });
 
-      // Ensure progress row
       const progress = await repo.ensureProgress(address, input.questId);
-
-      // Mark completion (idempotent)
       const newlyCompleted = await repo.markNodeComplete(progress.id, input.nodeId);
 
-      // Award XP only if newly completed
       let updated = progress;
       let awardedXp = 0;
 

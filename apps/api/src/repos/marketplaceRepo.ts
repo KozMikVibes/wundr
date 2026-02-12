@@ -130,7 +130,8 @@ export async function hasEntitlement(buyer: string, listingId: string) {
     `SELECT 1 FROM marketplace_entitlements WHERE buyer = $1 AND listing_id = $2`,
     [buyer, listingId]
   );
-  return res.rowCount > 0;
+  return (res.rowCount ?? 0) > 0;
+
 }
 
 export async function createReview(input: {
@@ -201,6 +202,7 @@ export async function requireEntitlement(buyer: string, listingId: string) {
     `SELECT 1 FROM marketplace_entitlements WHERE buyer = $1 AND listing_id = $2`,
     [buyer, listingId]
   );
-  return res.rowCount > 0;
+  return (res.rowCount ?? 0) > 0;
+
 }
 

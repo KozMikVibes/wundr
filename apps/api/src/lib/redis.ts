@@ -1,19 +1,26 @@
-import Redis from "ioredis";
+import IORedis from "ioredis";
 import { loadEnv } from "./env.js";
 
-const env = loadEnv();
-export const redis = new Redis(env.REDIS_URL, { lazyConnect: false });
+let _redis: IORedis | undefined;
 
-export async function setNonce(nonceId: string, nonce: string, ttlSeconds: number) {
-  // NX prevents overwrite
-  const ok = await redis.set(`siwe:nonce:${nonceId}`, nonce, "EX", ttlSeconds, "NX");
-  if (ok !== "OK") throw Object.assign(new Error("nonce_conflict"), { status: 409 });
+export function redis(): IORedis {
+  if (_redis) return _redis;
+  const env = loadEnv();
+  _redis = new IORedis(env.REDIS_URL, {
+    maxRetriesPerRequest: null,
+    enableReadyCheck: true,
+    lazyConnect: false
+  });
+  return _redis;
 }
 
-export async function consumeNonce(nonceId: string) {
-  const key = `siwe:nonce:${nonceId}`;
-  const nonce = await redis.get(key);
-  if (!nonce) return null;
-  await redis.del(key); // one-time use
-  return nonce;
+export async function setNonce(address: string, nonce: string, ttlSeconds: number): Promise<void> {
+  await redis().set(`nonce:${address.toLowerCase()}`, nonce, "EX", ttlSeconds);
+}
+
+export async function consumeNonce(address: string): Promise<string | null> {
+  const key = `nonce:${address.toLowerCase()}`;
+  const val = await redis().get(key);
+  if (val) await redis().del(key);
+  return val;
 }

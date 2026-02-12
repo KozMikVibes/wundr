@@ -56,7 +56,7 @@ export function marketplacePurchaseVerifyRouter() {
         `SELECT 1 FROM marketplace_purchases WHERE rail = $1 AND chain_id IS NOT DISTINCT FROM $2 AND tx_hash = $3 LIMIT 1`,
         [rail, chainId, input.txId]
       );
-      if (replay.rowCount > 0) return res.status(409).json({ error: "tx_already_used" });
+      if ((replay.rowCount ?? 0) > 0) return res.status(409).json({ error: "tx_already_used" });
 
       // Create pending purchase first (source-of-truth)
       // NOTE: if verification fails, we mark failed; if pending, worker completes.

@@ -1,41 +1,58 @@
 import type { PaymentVerifier, VerifyRequest, VerifyResult } from "./types.js";
 
 type PiCfg = {
-  apiBase: string;   // e.g. https://api.minepi.com (set to correct base per Pi docs)
-  apiKey: string;    // Pi Platform API key
+  apiBase: string; // e.g. https://api.minepi.com (set to correct base per Pi docs)
+  apiKey: string; // Pi Platform API key
 };
 
-async function piFetch(cfg: PiCfg, path: string, method: "GET" | "POST", body?: any) {
-  const resp = await fetch(`${cfg.apiBase}${path}`, {
-    method,
-    headers: {
-      "content-type": "application/json",
-      "authorization": `Key ${cfg.apiKey}`
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
+type JsonObject = Record<string, unknown>;
 
-  const json = await resp.json().catch(() => ({}));
-  if (!resp.ok) {
-    return Promise.reject(Object.assign(new Error("pi_api_error"), { status: resp.status, details: json }));
+function isObject(v: unknown): v is JsonObject {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+async function piFetch(cfg: PiCfg, path: string, method: "GET" | "POST", body?: unknown): Promise<JsonObject> {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(), 15_000);
+
+  try {
+    const resp = await fetch(`${cfg.apiBase}${path}`, {
+      method,
+      signal: ac.signal,
+      headers: {
+        "content-type": "application/json",
+        authorization: `Key ${cfg.apiKey}`,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+
+    const parsed = (await resp.json().catch(() => ({}))) as unknown;
+
+    if (!resp.ok) {
+      throw Object.assign(new Error("pi_api_error"), { status: resp.status, details: parsed });
+    }
+
+    return isObject(parsed) ? parsed : {};
+  } finally {
+    clearTimeout(t);
   }
-  return json;
 }
 
 export class PiVerifier implements PaymentVerifier {
   constructor(private cfg: PiCfg) {}
 
-  async verify(req: VerifyRequest, expected: { treasury: string; minAtomic: string; minConfirmations: number }): Promise<VerifyResult> {
+  async verify(
+    req: VerifyRequest,
+    expected: { treasury: string; minAtomic: string; minConfirmations: number }
+  ): Promise<VerifyResult> {
     // req.txId is paymentId (Pi platform)
     // expected.treasury is your app’s configured receiver/identity concept (varies by Pi integration)
     const minAtomic = BigInt(expected.minAtomic);
 
     // 1) Read payment
-    // Pi Platform APIs allow querying transactions related to your app :contentReference[oaicite:12]{index=12}
     const payment = await piFetch(this.cfg, `/payments/${req.txId}`, "GET");
 
-    // Shape varies; you should map fields based on your Pi payment configuration.
-    // We enforce minimal invariants:
+    // Minimal invariants, with defensive parsing:
     const status = String(payment.status ?? "").toLowerCase();
     const amount = payment.amount != null ? BigInt(String(payment.amount)) : 0n;
 
@@ -47,12 +64,11 @@ export class PiVerifier implements PaymentVerifier {
       return { ok: false, reason: "insufficient_value", meta: { amount: amount.toString() } };
     }
 
-    // 2) Server-side completion handshake (recommended by Pi flow docs) :contentReference[oaicite:13]{index=13}
-    // If your integration requires explicit completion:
+    // 2) Optional server-side completion handshake
     try {
       await piFetch(this.cfg, `/payments/${req.txId}/complete`, "POST", {});
     } catch {
-      // if already completed, some implementations may return an error; treat as non-fatal
+      // If already completed, some implementations may error; treat as non-fatal
     }
 
     return {
@@ -60,7 +76,7 @@ export class PiVerifier implements PaymentVerifier {
       canonicalId: req.txId,
       amountAtomic: amount.toString(),
       confirmations: 1,
-      meta: { status }
+      meta: { status },
     };
   }
 }

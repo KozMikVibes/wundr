@@ -1,4 +1,16 @@
 {
+	"name": "wundr",
+	"private": true,
+	"packageManager": "pnpm@9.15.4",
+	"scripts": {
+		"dev": "pnpm -r dev",
+		"build": "pnpm -r build",
+		"lint": "pnpm -r lint",
+		"db:up": "pnpm --filter @wundr/db migrator up",
+		"db:down": "pnpm --filter @wundr/db migrator down",
+		"db:status": "pnpm --filter @wundr/db migrator status",
+		"api:dev": "pnpm --filter @wundr/api dev"
+	},
 	"dependencies": {
 		"bullmq": "^5.67.2",
 		"cookie-parser": "^1.4.7",
@@ -21,6 +33,8 @@
 		"@types/express": "^5.0.6",
 		"@types/jsonwebtoken": "^9.0.10",
 		"@types/pg": "^8.16.0",
+		"node-pg-migrate": "^7.7.3",
+		"ts-node": "^10.9.2",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3"
 	}

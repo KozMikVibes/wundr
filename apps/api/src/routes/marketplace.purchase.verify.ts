@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
 import { requireCsrf } from "../lib/csrf.js";
 import { sanitizeString } from "../lib/sanitize.js";
-import { q } from "../lib/db.js";
+import { q } from "../lib/db.internal.js";
 
 import * as market from "../repos/marketplaceRepo.js";
 import * as railsRepo from "../repos/paymentRailsRepo.js";

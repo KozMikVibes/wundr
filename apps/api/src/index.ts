@@ -1,10 +1,15 @@
-import http from "node:http";
+import { loadEnv } from "./lib/env.js";
+import { buildApp } from "./app.js";
 
-const server = http.createServer((_, res) => {
-  res.writeHead(200);
-  res.end("API online");
-});
+const env = loadEnv();
 
-server.listen(3000, () => {
-  console.log("API listening on :3000");
-});
+const app = await buildApp();
+
+try {
+  await app.listen({ port: env.PORT, host: "0.0.0.0" });
+  app.log.info(`API listening on :${env.PORT}`);
+} catch (err: any) {
+  // eslint-disable-next-line no-console
+  console.error(err);
+  process.exit(1);
+}

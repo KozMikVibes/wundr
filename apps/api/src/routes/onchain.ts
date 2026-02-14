@@ -4,7 +4,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { requireCsrf } from "../lib/csrf.js";
 import { sanitizeString } from "../lib/sanitize.js";
 import * as market from "../repos/marketplaceRepo.js";
-import { q } from "../lib/db.js";
+import { q } from "../lib/db.internal.js";
 import { makeClient, verifyNativePayment, verifyErc20Payment, type SupportedChainId } from "../lib/onchainVerify.js";
 
 function normAddress(addr: string) {

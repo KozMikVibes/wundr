@@ -5,7 +5,7 @@ import { requireRole } from "../middleware/requireRole.js";
 import { requireCsrf } from "../lib/csrf.js";
 import { sanitizeString } from "../lib/sanitize.js";
 import * as publish from "../repos/publishRepo.js";
-import { q } from "../lib/db.js";
+import { q } from "../lib/db.internal.js";
 
 function normAddress(addr: string) {
   return sanitizeString(addr, 80).toLowerCase();

@@ -1,4 +1,4 @@
-import { withTenant, q } from "../lib/db.js";
+import { withTenant, q } from "../lib/db.internal.js";
 import { z } from "zod";
 
 export async function messagingRoutes(app: any) {

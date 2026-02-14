@@ -1,4 +1,4 @@
-import { q } from "../lib/db.js";
+import { q } from "../lib/db.internal.js";
 
 /**
  * Publish category: snapshot the current learn_categories row into learn_category_versions

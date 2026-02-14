@@ -1,4 +1,4 @@
-import { q } from "../lib/db.js";
+import { q } from "../lib/db.internal.js";
 
 export type Visibility = "public" | "unlisted" | "private";
 export type Difficulty = "easy" | "medium" | "hard";

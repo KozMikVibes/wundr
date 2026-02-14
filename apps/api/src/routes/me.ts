@@ -1,4 +1,4 @@
-import { pool } from "../lib/db.js";
+import { pool } from "../lib/db.internal.js";
 import { z } from "zod";
 
 export async function meRoutes(app: any) {

@@ -1,6 +1,6 @@
 import { Worker } from "bullmq";
 import { redis } from "../lib/redis.js";
-import { q } from "../lib/db.js";
+import { q } from "../lib/db.internal.js";
 import * as railsRepo from "../repos/paymentRailsRepo.js";
 import * as purchaseRepo from "../repos/purchaseRepo.js";
 import * as market from "../repos/marketplaceRepo.js";

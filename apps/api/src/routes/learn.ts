@@ -5,7 +5,7 @@ import { requireCsrf } from "../lib/csrf.js";
 import { sanitizeSlug, sanitizeString } from "../lib/sanitize.js";
 import { CAPS } from "../lib/caps.js";
 import * as repo from "../repos/learnRepo.js";
-import { q } from "../lib/db.js";
+import { q } from "../lib/db.internal.js";
 
 function normAddress(addr: string) {
   return sanitizeString(addr, 80).toLowerCase();

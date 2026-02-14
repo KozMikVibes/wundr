@@ -1,4 +1,4 @@
-import { q } from "../lib/db.js";
+import { q } from "../lib/db.internal.js";
 
 export async function upsertCreator(input: {
   address: string;

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { pool } from "../lib/db.js";
+import { pool } from "../lib/db.internal.js";
 
 async function main() {
   const dir = path.resolve(process.cwd(), "migrations");

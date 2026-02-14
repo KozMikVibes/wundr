@@ -1,4 +1,4 @@
-import { q } from "../lib/db.js";
+import { q } from "../lib/db.internal.js";
 
 export type Rail = "eth" | "btc" | "xrp" | "pi";
 export type PriceCurrency = "usd" | "usdc" | "eth" | "btc" | "xrp" | "pi";

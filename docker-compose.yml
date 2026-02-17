@@ -12,6 +12,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - wundr_pg:/var/lib/postgresql/data
+      - ./apps/api/migrations:/migrations:ro
       
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d wundr"]

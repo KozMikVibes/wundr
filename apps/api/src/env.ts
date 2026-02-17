@@ -1,30 +1,50 @@
 import "dotenv/config";
 import { z } from "zod";
 
-const Env = z.object({
-  NODE_ENV: z.string().default("development"),
-  PORT: z.coerce.number().default(3000),
+const EnvSchema = z.object({
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  PORT: z.coerce.number().int().positive().default(3000),
 
-  DATABASE_URL: z.string().min(10),
+  DATABASE_URL: z.string().min(1),
+  REDIS_URL: z.string().min(1),
 
-  // auth
-  JWT_SECRET: z.string().min(16),
-  BCRYPT_COST: z.coerce.number().default(12),
+  CORS_ORIGIN: z.string().default("http://localhost:3001"),
 
-  // optional but already in docker-compose.yml
-  REDIS_URL: z.string().optional(),
-  CORS_ORIGIN: z.string().optional(),
+  JWT_SECRET: z.string().min(16).default("change_me_change_me_change_me_change_me"),
+  COOKIE_NAME: z.string().default("wundr_session"),
+  COOKIE_SECURE: z
+    .string()
+    .transform((v) => v === "true")
+    .default("false" as unknown as boolean),
 
-  // SIWE (since you already have env placeholders)
-  SIWE_DOMAIN: z.string().optional(),
-  SIWE_URI_ALLOWLIST: z.string().optional(),
-  SIWE_CHAIN_ALLOWLIST: z.string().optional(),
-  SIWE_ISSUED_AT_MAX_AGE_SECONDS: z.coerce.number().optional(),
+  SESSION_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
 
-  // cookies/session (future)
-  COOKIE_NAME: z.string().optional(),
-  COOKIE_SECURE: z.coerce.boolean().optional(),
-  SESSION_TTL_SECONDS: z.coerce.number().optional()
+  SIWE_DOMAIN: z.string().default("localhost"),
+  SIWE_URI_ALLOWLIST: z.string().default("http://localhost:3001"),
+  SIWE_CHAIN_ALLOWLIST: z.string().default("1,8453,137"),
+  SIWE_ISSUED_AT_MAX_AGE_SECONDS: z.coerce.number().int().positive().default(600),
 });
 
-export const env = Env.parse(process.env);
+export type Env = z.infer<typeof EnvSchema>;
+
+let cached: Env | undefined;
+
+export function loadEnv(): Env {
+  if (cached) return cached;
+
+  const parsed = EnvSchema.safeParse(process.env);
+  if (!parsed.success) {
+    // eslint-disable-next-line no-console
+    console.error(parsed.error.flatten());
+    throw new Error("Invalid environment variables");
+  }
+
+  cached = parsed.data;
+  return cached;
+}
+
+/**
+ * Canonical singleton env object for imports.
+ * Use: import { env } from "./env.js"
+ */
+export const env: Env = loadEnv();

@@ -99,9 +99,6 @@ importers:
       cors:
         specifier: ^2.8.6
         version: 2.8.6
-      dev:
-        specifier: node --loader ts-node/esm src/server.ts
-        version: link:node --loader ts-node/esm src/server.ts
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3
